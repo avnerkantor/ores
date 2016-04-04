@@ -1,9 +1,0 @@
-{
-    "path" : "~/ores",
-    "sortOrder" : [
-        {
-            "ascending" : true,
-            "columnIndex" : 2
-        }
-    ]
-}
