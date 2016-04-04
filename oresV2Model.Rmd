@@ -1,0 +1,169 @@
+---
+title: "Evaluating ORES Models"
+author: "Avner Kantor"
+date: "3.4.2016"
+output: html_document
+---
+
+**The Objective Revision Evaluation Service (ORES)** is a web service running in Wikimedia Labs that provides machine learning as a service for Wikimedia Projects. (<https://ores.wmflabs.org/>). You can read more [here](http://socio-technologist.blogspot.co.il/2015/10/ores-hacking-social-structures-by.html>).
+
+The damage model was trained on human judgement to predict damaging edits. Remember that not all damaging edits are bad-faith.(<https://meta.wikimedia.org/wiki/ORES/damaging>) 
+
+We explored the bias that ORES' damage detection models have against anonymous editors in Wikipedia. We did a statistical analysis to show that the bias is extreme and then changed our modeling strategy to minimize the bias re-measured the effects.
+
+Thanks Aaron for the supervision!
+
+### V2 Model - Damaging
+Example: https://ores.wmflabs.org/v2/scores/enwiki/damaging/623818349/
+
+```{r, eval=FALSE}
+# Download revs_id
+library(jsonlite)
+
+document <- fromJSON("http://labels.wmflabs.org/campaigns/enwiki/4/?tasks")
+
+# Find revs_is.labels.damaging
+revs_id<- document$tasks$data$rev_id
+damagings<- sapply(1:20000, function(x) document$tasks$labels[[x]]$data$damaging)
+
+# Find damaging predictions
+df<-as.data.frame(cbind(revs_id, damagings))
+dfFalse<-select(filter(df, damagings!="TRUE"), revs_id)
+dfTrue<-select(filter(df, damagings=="TRUE"), revs_id)
+
+# Get Damaging Probabilities
+getStats <- function(id) {
+  rdTrue <- fromJSON(paste0("https://ores.wmflabs.org/v2/scores/enwiki/damaging/", id, "/?feature.is_anon=true"))
+  rdFalse<-fromJSON(paste0("https://ores.wmflabs.org/v2/scores/enwiki/damaging/", id, "/?feature.is_anon=false"))
+  
+  rdTruePredictionTrue<-rdTrue$scores$enwiki$damaging$scores[[1]]$probability$true
+  rdTruePredictionFalse<-rdFalse$scores$enwiki$damaging$scores[[1]]$probability$true
+  
+  return(list(rdTruePredictionTrue, rdTruePredictionFalse))
+}
+
+# Test  Model - Prediction is False
+anonFalseModel<-sapply(1:500, function(x) getStats(dfFalse[x,]))
+```
+
+```{r, echo=FALSE}
+load("anonFalseModel.rda")
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+### Manipulating
+library(dplyr)
+library(reshape2)
+
+anonFalseModelDF<-t(anonFalseModel)
+colnames(anonFalseModelDF)<-c("anon_true", "anon_false")
+anonFalseModelDF<-as.data.frame(anonFalseModelDF)
+anonFalseModelDFManipulated<-melt(lapply(anonFalseModelDF, unlist))
+
+### PlotFalse
+library(ggplot2)
+
+ggplot(anonFalseModelDFManipulated, aes(x=value)) + 
+  geom_density(aes(group=L1, colour=L1, fill=L1), alpha=0.3) +
+  labs(title="ORES damaging prediction is false", x="N=500") + 
+  geom_vline(xintercept = c(0.8, 0.87, 0.94),  colour="green", linetype = "longdash")
+
+###Calculate the difference
+anonFalseModelDF$difference<-as.numeric(as.character(anonFalseModelDF$anon_true))-as.numeric(as.character(anonFalseModelDF$anon_false))
+anonFalseModelDF<-anonFalseModelDF[, c("anon_true", "anon_false", "difference")]
+anonFalseModelDFManipulated2<-melt(lapply(anonFalseModelDF, unlist))
+
+### PlotTrue2
+ggplot(anonFalseModelDFManipulated2, aes(x=value)) + 
+  geom_density(aes(group=L1, colour=L1, fill=L1), alpha=0.3) +
+  labs(title="ORES damaging prediction is false+difference", x="N=500") + 
+  geom_vline(xintercept = c(0.8, 0.87, 0.94),  colour="green", linetype = "longdash")
+```
+
+Now, let's calculate the true probabilities in the same way.
+
+```{r, echo=FALSE}
+load("anonTrueModel.rda")
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+### Manipulating
+anonTrueModelDF<-t(anonTrueModel)
+colnames(anonTrueModelDF)<-c("anon_true", "anon_false")
+anonTrueModelDF<-as.data.frame(anonTrueModelDF)
+anonTrueModelDFManipulated<-melt(lapply(anonTrueModelDF, unlist))
+
+### PlotTrue
+ggplot(anonTrueModelDFManipulated, aes(x=value)) + 
+  geom_density(aes(group=L1, colour=L1, fill=L1), alpha=0.3) +
+  labs(title="ORES damaging prediction is true", x="N=500") + 
+  geom_vline(xintercept = c(0.8, 0.87, 0.94),  colour="green", linetype = "longdash")
+
+###Calculate the difference
+anonTrueModelDF$difference<-as.numeric(as.character(anonTrueModelDF$anon_true))-as.numeric(as.character(anonTrueModelDF$anon_false))
+anonTrueModelDF<-anonTrueModelDF[, c("anon_true", "anon_false", "difference")]
+anonTrueModelDFManipulated2<-melt(lapply(anonTrueModelDF, unlist))
+
+### PlotTrue2
+ggplot(anonTrueModelDFManipulated2, aes(x=value)) + 
+  geom_density(aes(group=L1, colour=L1, fill=L1), alpha=0.3) +
+  labs(title="ORES damaging prediction is true+difference", x="N=500") + 
+  geom_vline(xintercept = c(0.8, 0.87, 0.94),  colour="green", linetype = "longdash")
+
+```
+
+### The New Model - Damaging
+Example: https://ores-newmodels.wmflabs.org/v2/scores/enwiki/damaging/623818349/
+```{r, echo=FALSE}
+load("anonFalseNewModel.rda")
+load("anonTrueNewModel.rda")
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+### Manipulating
+anonFalseNewModelDF<-t(anonFalseNewModel)
+colnames(anonFalseNewModelDF)<-c("anon_true", "anon_false")
+anonFalseNewModelDF<-as.data.frame(anonFalseNewModelDF)
+anonFalseNewModelDFManipulated<-melt(lapply(anonFalseNewModelDF, unlist))
+
+### PlotFalse
+ggplot(anonFalseNewModelDFManipulated, aes(x=value)) + 
+  geom_density(aes(group=L1, colour=L1, fill=L1), alpha=0.3) +
+  labs(title="ORES damaging prediction is false", x="N=500") + 
+  geom_vline(xintercept = c(0.8, 0.87, 0.94),  colour="green", linetype = "longdash")
+
+### Manipulating
+anonFalseNewModelDF$difference<-as.numeric(as.character(anonFalseNewModelDF$anon_true))-as.numeric(as.character(anonFalseNewModelDF$anon_false))
+anonFalseNewModelDF<-anonFalseNewModelDF[, c("anon_true", "anon_false", "difference")]
+anonTrueNewModelDFManipulated2<-melt(lapply(anonFalseNewModelDF, unlist))
+
+### PlotFalse2
+ggplot(anonTrueNewModelDFManipulated2, aes(x=value)) + 
+  geom_density(aes(group=L1, colour=L1, fill=L1), alpha=0.3) +
+  labs(title="ORES damaging prediction is false+difference", x="N=500") + 
+  geom_vline(xintercept = c(0.8, 0.87, 0.94),  colour="green", linetype = "longdash")
+
+### Manipulating
+anonTrueNewModelDF<-t(anonTrueNewModel)
+colnames(anonTrueNewModelDF)<-c("anon_true", "anon_false")
+anonTrueNewModelDF<-as.data.frame(anonTrueNewModelDF)
+anonTrueNewModelDFManipulated<-melt(lapply(anonTrueNewModelDF, unlist))
+
+### PlotTrue
+ggplot(anonTrueNewModelDFManipulated, aes(x=value)) + 
+  geom_density(aes(group=L1, colour=L1, fill=L1), alpha=0.3) +
+  labs(title="ORES damaging prediction is true", x="N=500") + 
+  geom_vline(xintercept = c(0.8, 0.87, 0.94),  colour="green", linetype = "longdash")
+
+###Calculate the difference
+anonTrueNewModelDF$difference<-as.numeric(as.character(anonTrueNewModelDF$anon_true))-as.numeric(as.character(anonTrueNewModelDF$anon_false))
+anonTrueNewModelDF<-anonTrueNewModelDF[, c("anon_true", "anon_false", "difference")]
+anonTrueNewModelDFManipulated2<-melt(lapply(anonTrueNewModelDF, unlist))
+
+### PlotTrue2
+ggplot(anonTrueNewModelDFManipulated2, aes(x=value)) + 
+  geom_density(aes(group=L1, colour=L1, fill=L1), alpha=0.3) +
+  labs(title="ORES damaging prediction is true+difference", x="N=500") + 
+  geom_vline(xintercept = c(0.8, 0.87, 0.94),  colour="green", linetype = "longdash")
+
+```

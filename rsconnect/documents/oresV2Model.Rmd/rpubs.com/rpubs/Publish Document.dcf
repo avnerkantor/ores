@@ -1,0 +1,7 @@
+name: Publish Document
+account: rpubs
+server: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/167621/073efb6ce2e94a42889262c84cd81ab0
+bundleId: https://api.rpubs.com/api/v1/document/167621/073efb6ce2e94a42889262c84cd81ab0
+url: http://rpubs.com/avner/167621
+when: 1459709534.1901
