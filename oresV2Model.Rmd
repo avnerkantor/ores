@@ -47,7 +47,7 @@ anonFalseModel<-sapply(1:500, function(x) getStats(dfFalse[x,]))
 ```
 
 ```{r, echo=FALSE}
-load("anonFalseModel.rda")
+load("data/anonFalseModel.rda")
 ```
 
 ```{r, echo=TRUE, message=FALSE, warning=FALSE}
@@ -83,7 +83,7 @@ ggplot(anonFalseModelDFManipulated2, aes(x=value)) +
 Now, let's calculate the true probabilities in the same way.
 
 ```{r, echo=FALSE}
-load("anonTrueModel.rda")
+load("data/anonTrueModel.rda")
 ```
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
@@ -115,8 +115,8 @@ ggplot(anonTrueModelDFManipulated2, aes(x=value)) +
 ### The New Model - Damaging
 Example: https://ores-newmodels.wmflabs.org/v2/scores/enwiki/damaging/623818349/
 ```{r, echo=FALSE}
-load("anonFalseNewModel.rda")
-load("anonTrueNewModel.rda")
+load("data/anonFalseNewModel.rda")
+load("data/anonTrueNewModel.rda")
 ```
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
