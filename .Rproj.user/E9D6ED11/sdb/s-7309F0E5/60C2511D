@@ -1,14 +1,14 @@
 {
     "collab_server" : "",
-    "contents" : ".Rhistory\n.Rapp.history\n.gitignore\n/rsconnect",
+    "contents" : ".Rhistory\n.Rapp.history\n.Rproj\n.gitignore\n/rsconnect",
     "created" : 1459761141334.000,
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "2285002589",
+    "hash" : "2903758584",
     "id" : "60C2511D",
-    "lastKnownWriteTime" : 1459761799,
-    "last_content_update" : 1459761799029,
+    "lastKnownWriteTime" : 1459761856,
+    "last_content_update" : 1459761856829,
     "path" : "~/ores/.gitignore",
     "project_path" : ".gitignore",
     "properties" : {
